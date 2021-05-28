@@ -1,0 +1,527 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "comments": "This wildfire custom connector uses wildfire API to perform different action",
+    "author": "Ashok M C,Wildfire"
+  },
+  "parameters": {
+    "service_EndPoint": {
+      "defaultValue": "https://{yourDomain}",
+      "type": "String",
+      "metadata": {
+        "description": "enter the wildfire endpoint (ex: https://{yourDomain})"
+      }
+    }
+  },
+  "variables": {
+    "PaloaltoWFConnectorname": "PaloaltoWFConnector"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/customApis",
+      "apiVersion": "2016-06-01",
+      "name": "[variables('PaloaltoWFConnectorname')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "connectionParameters": {
+          "api_key": {
+            "type": "securestring",
+            "uiDefinition": {
+              "displayName": "apikey",
+              "description": "The apikey for this api",
+              "tooltip": "Provide your apikey",
+              "constraints": {
+                "tabIndex": 2,
+                "clearText": false,
+                "required": "true"
+              }
+            }
+          }
+        },
+        "backendService": {
+          "serviceUrl": "[parameters('service_EndPoint')]"
+        },
+        "description": "Connector to wildfire and wildfire API's",
+        "displayName": "[variables('PaloaltoWFConnectorname')]",
+        "iconUri": "/Content/retail/assets/default-connection-icon.e6bb72160664a5e37b9923c3d9f50ca5.2.svg",
+        "swagger": {
+          "swagger": "2.0",
+          "info": {
+            "title": "Default title",
+            "description": "",
+            "version": "1.0"
+          },
+          "host": "wildfire.paloaltonetworks.com",
+          "basePath": "/",
+          "schemes": [ "https" ],
+          "consumes": [],
+          "produces": [],
+          "paths": {
+            "/get/report": {
+              "post": {
+                "responses": {
+                  "default": {
+                    "description": "default",
+                    "schema": {}
+                  }
+                },
+                "summary": "Generate Report",
+                "description": "Generate Report of the hash",
+                "operationId": "GenerateReport",
+                "parameters": [
+                  {
+                    "name": "Content-Type",
+                    "in": "header",
+                    "required": false,
+                    "type": "string",
+                    "default": "application/json",
+                    "description": "Content-Type in the header section"
+                  },
+                  {
+                    "name": "body",
+                    "in": "body",
+                    "required": false,
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "apikey": {
+                          "type": "string",
+                          "description": "apikey of the cloud wildfire",
+                          "title": "apikey"
+                        },
+                        "url": {
+                          "type": "string",
+                          "description": "please enter URL to get verdict",
+                          "title": "url"
+                        },
+                        "hash": {
+                          "type": "string",
+                          "description": "please enter file of the hash to get verdict",
+                          "title": "hash"
+                        },
+                        "format": {
+                          "type": "string",
+                          "description": "format of the output either it will be xml or pdf",
+                          "title": "format",
+                          "default": "xml"
+                        }
+                      },
+                      "required": [ "apikey" ]
+                    }
+                  }
+                ]
+              }
+            },
+            "/get/sample": {
+              "post": {
+                "responses": {
+                  "default": {
+                    "description": "default",
+                    "schema": {}
+                  }
+                },
+                "summary": "Sample",
+                "description": "Sample",
+                "operationId": "Sample",
+                "parameters": [
+                  {
+                    "name": "Content-Type",
+                    "in": "header",
+                    "required": false,
+                    "type": "string"
+                  },
+                  {
+                    "name": "body",
+                    "in": "body",
+                    "required": false,
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "hash": {
+                          "type": "string",
+                          "description": "hash"
+                        },
+                        "apikey": {
+                          "type": "string",
+                          "description": "apikey"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "/get/webartifacts": {
+              "post": {
+                "responses": {
+                  "default": {
+                    "description": "default",
+                    "schema": {}
+                  }
+                },
+                "summary": "Web Artifacts",
+                "operationId": "WebArtifacts",
+                "description": "This action used for resource to get the web artifacts found during analysis of the specified web page URL",
+                "parameters": [
+                  {
+                    "name": "Content-Type",
+                    "in": "header",
+                    "required": false,
+                    "type": "string",
+                    "default": "application/json",
+                    "description": "Content-type in  header section"
+                  },
+                  {
+                    "name": "body",
+                    "in": "body",
+                    "required": false,
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "apikey": {
+                          "type": "string",
+                          "description": "apikey",
+                          "title": "apikey"
+                        },
+                        "url": {
+                          "type": "string",
+                          "description": "The URL of the web page Example",
+                          "title": "url"
+                        },
+                        "types": {
+                          "type": "string",
+                          "description": "Web artifact types  either its (screenshot,download_files)",
+                          "title": "types"
+                        }
+                      },
+                      "required": [ "apikey", "url" ]
+                    }
+                  }
+                ]
+              }
+            },
+            "/get/pcap": {
+              "post": {
+                "responses": {
+                  "default": {
+                    "description": "default",
+                    "schema": {}
+                  }
+                },
+                "summary": "Get Packet Capture",
+                "description": "This action used for resource to request a packet capture (PCAP) recorded during analysis of a particular sample",
+                "operationId": "GetPacketCapture",
+                "parameters": [
+                  {
+                    "name": "Content-Type",
+                    "in": "header",
+                    "required": false,
+                    "type": "string",
+                    "default": "application/json",
+                    "description": "Content-Type in header section"
+                  },
+                  {
+                    "name": "body",
+                    "in": "body",
+                    "required": false,
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "apikey": {
+                          "type": "string",
+                          "description": "apikey",
+                          "title": "apikey"
+                        },
+                        "hash": {
+                          "type": "string",
+                          "description": "hash of the file",
+                          "title": "hash"
+                        },
+                        "platform": {
+                          "type": "string",
+                          "description": "Target analysis environment",
+                          "title": "platform"
+                        }
+                      },
+                      "required": [ "apikey", "hash" ]
+                    }
+                  }
+                ]
+              }
+            },
+            "/test/macos": {
+              "get": {
+                "responses": {
+                  "default": {
+                    "description": "default",
+                    "schema": {}
+                  }
+                },
+                "summary": "Get Macos files",
+                "operationId": "GetMacosfiles",
+                "description": "This is used to get the macOS",
+                "parameters": [
+                  {
+                    "name": "Content-Type",
+                    "in": "header",
+                    "required": false,
+                    "type": "string",
+                    "default": "application/json",
+                    "description": "Content-Type"
+                  },
+                  {
+                    "name": "apikey",
+                    "in": "header",
+                    "required": true,
+                    "type": "string",
+                    "description": "apikey"
+                  },
+                  {
+                    "name": "Test file type",
+                    "in": "header",
+                    "required": true,
+                    "type": "string",
+                    "description": "Type of the test file",
+                    "default": "Testfiletype"
+                  }
+                ]
+              }
+            },
+            "/test/apk": {
+              "get": {
+                "responses": {
+                  "default": {
+                    "description": "default",
+                    "schema": {}
+                  }
+                },
+                "summary": "Android application package",
+                "description": "This used to get the Android application package",
+                "operationId": "Androidapplicationpackage",
+                "parameters": [
+                  {
+                    "name": "Content-type",
+                    "in": "header",
+                    "required": false,
+                    "type": "string",
+                    "default": "application/json",
+                    "description": "Content-type in header section"
+                  },
+                  {
+                    "name": "apikey",
+                    "in": "header",
+                    "required": true,
+                    "type": "string",
+                    "description": "apikey"
+                  },
+                  {
+                    "name": "Testfiletype",
+                    "in": "header",
+                    "required": true,
+                    "type": "string",
+                    "description": "Type of the file"
+                  }
+                ]
+              }
+            },
+            "/test/elf": {
+              "get": {
+                "responses": {
+                  "default": {
+                    "description": "default",
+                    "schema": {}
+                  }
+                },
+                "summary": "Executable Linkable Format",
+                "description": "This used to get the Executable Linkable Format",
+                "operationId": "ExecutableLinkableFormat",
+                "parameters": [
+                  {
+                    "name": "Content-type",
+                    "in": "header",
+                    "required": false,
+                    "type": "string",
+                    "default": "application/json",
+                    "description": "Content-type in header section"
+                  },
+                  {
+                    "name": "apikey",
+                    "in": "header",
+                    "required": true,
+                    "type": "string",
+                    "description": "apikey"
+                  },
+                  {
+                    "name": "Testfiletype",
+                    "in": "header",
+                    "required": true,
+                    "type": "string",
+                    "description": "Type of the file"
+                  }
+                ]
+              }
+            },
+            "/test/pe": {
+              "get": {
+                "responses": {
+                  "default": {
+                    "description": "default",
+                    "schema": {}
+                  }
+                },
+                "summary": "Portable Executable",
+                "description": "This used to get the Portable Executable",
+                "operationId": "PortableExecutable",
+                "parameters": [
+                  {
+                    "name": "Content-type",
+                    "in": "header",
+                    "required": false,
+                    "type": "string",
+                    "default": "application/json",
+                    "description": "Content-type in header section"
+                  },
+                  {
+                    "name": "apikey",
+                    "in": "header",
+                    "required": true,
+                    "type": "string",
+                    "description": "apikey"
+                  },
+                  {
+                    "name": "Testfiletype",
+                    "in": "header",
+                    "required": true,
+                    "type": "string",
+                    "description": "Type of the file"
+                  }
+                ]
+              }
+            },
+            "/get/verdict": {
+              "post": {
+                "responses": {
+                  "default": {
+                    "description": "default",
+                    "schema": {}
+                  }
+                },
+                "summary": "Create Verdict",
+                "description": "This action will give us the verdict information of URL or File hash",
+                "operationId": "CreateVerdict",
+                "parameters": [
+                  {
+                    "name": "Content-Type",
+                    "in": "header",
+                    "required": false,
+                    "type": "string",
+                    "default": "application/json",
+                    "description": "Content-Type in the header section"
+                  },
+                  {
+                    "name": "body",
+                    "in": "body",
+                    "required": false,
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "apikey": {
+                          "type": "string",
+                          "description": "apikey of the  cloud wildfire api",
+                          "title": "apikey"
+                        },
+                        "hash": {
+                          "type": "string",
+                          "description": "please enter file of the hash to get verdict",
+                          "title": "hash"
+                        },
+                        "url": {
+                          "type": "string",
+                          "description": "please enter url to get verdict",
+                          "title": "url"
+                        }
+                      },
+                      "required": [ "apikey" ]
+                    }
+                  }
+                ]
+              }
+            },
+            "/submit/link": {
+              "post": {
+                "responses": {
+                  "default": {
+                    "description": "default",
+                    "schema": {}
+                  }
+                },
+                "summary": "Submit Link for wild fire",
+                "operationId": "SubmitLink",
+                "description": "This action is used submit link for the wild fire",
+                "parameters": [
+                  {
+                    "name": "Content-Type",
+                    "in": "header",
+                    "required": true,
+                    "type": "string",
+                    "description": "content-type in header section"
+                  },
+                  {
+                    "name": "body",
+                    "in": "body",
+                    "required": true,
+                    "schema": { "type": "string" }
+                  }
+                ]
+              }
+            },
+            "/submit/url": {
+              "post": {
+                "responses": {
+                  "default": {
+                    "description": "default",
+                    "schema": {}
+                  }
+                },
+                "summary": "Submit URL in wildfire",
+                "description": "This is used to submit URL in wildfire",
+                "operationId": "SubmitURL",
+                "parameters": [
+                  {
+                    "name": "Content-Type",
+                    "in": "header",
+                    "required": false,
+                    "type": "string"
+                  },
+                  {
+                    "name": "body",
+                    "in": "body",
+                    "required": false,
+                    "schema": {
+                      "type": "string",
+                      "properties": {}
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "definitions": {},
+          "parameters": {},
+          "responses": {},
+          "securityDefinitions": {
+            "API Key": {
+              "type": "apiKey",
+              "in": "header",
+              "name": "apikey"
+            }
+          },
+          "security": [ { "API Key": [] } ],
+          "tags": []
+        }
+
+      }
+    }
+  ]
+}
