@@ -111,7 +111,22 @@
               "type": "Object"
             }
           },
-
+          "staticResults": {
+            "Entities_-_Get_URLs0": {
+              "status": "Succeeded",
+              "outputs": {
+                "body": {
+                  "URLs": [
+                    {
+                      "Url": "walletconnectionlinks.com"
+                    }
+                  ]
+                },
+                "headers": {},
+                "statusCode": "OK"
+              }
+            }
+          },
           "triggers": {
             "When_Azure_Sentinel_incident_creation_rule_was_triggered": {
               "type": "ApiConnectionWebhook",
@@ -121,7 +136,7 @@
                 },
                 "host": {
                   "connection": {
-                    "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
+                    "name": "@parameters('$connections')['azuresentinel']['connectionId']"
                   }
                 },
                 "path": "/incident-creation"
@@ -144,7 +159,7 @@
                         },
                         "host": {
                           "connection": {
-                            "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
+                            "name": "@parameters('$connections')['azuresentinel']['connectionId']"
                           }
                         },
                         "method": "post",
@@ -167,7 +182,7 @@
                         },
                         "host": {
                           "connection": {
-                            "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
+                            "name": "@parameters('$connections')['azuresentinel']['connectionId']"
                           }
                         },
                         "method": "put",
@@ -199,7 +214,7 @@
                           },
                           "host": {
                             "connection": {
-                              "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
+                              "name": "@parameters('$connections')['azuresentinel']['connectionId']"
                             }
                           },
                           "method": "post",
@@ -231,7 +246,7 @@
                 "body": "@triggerBody()?['object']?['properties']?['relatedEntities']",
                 "host": {
                   "connection": {
-                    "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
+                    "name": "@parameters('$connections')['azuresentinel']['connectionId']"
                   }
                 },
                 "method": "post",
@@ -287,7 +302,7 @@
                         },
                         "host": {
                           "connection": {
-                            "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
+                            "name": "@parameters('$connections')['azuresentinel']['connectionId']"
                           }
                         },
                         "method": "put",
@@ -401,7 +416,7 @@
                                   },
                                   "host": {
                                     "connection": {
-                                      "name": "@parameters('$connections')['PaloAltoConnector_1']['connectionId']"
+                                      "name": "@parameters('$connections')['PaloAltoConnector']['connectionId']"
                                     }
                                   },
                                   "method": "put",
@@ -441,7 +456,7 @@
                                       },
                                       "host": {
                                         "connection": {
-                                          "name": "@parameters('$connections')['PaloAltoConnector_1']['connectionId']"
+                                          "name": "@parameters('$connections')['PaloAltoConnector']['connectionId']"
                                         }
                                       },
                                       "method": "post",
@@ -534,7 +549,7 @@
                               },
                               "host": {
                                 "connection": {
-                                  "name": "@parameters('$connections')['teams_1']['connectionId']"
+                                  "name": "@parameters('$connections')['teams']['connectionId']"
                                 }
                               },
                               "path": "/flowbot/actions/flowcontinuation/recipienttypes/channel/$subscriptions",
@@ -562,13 +577,13 @@
                                   "wrap": true
                                 },
                                 {
-                                  "text": "  Incident - Paloalto wildfire URL Action ",
+                                  "text": "@{triggerBody()?['object']?['properties']?['status']}  Incident - Paloalto wildfire URL Action ",
                                   "type": "TextBlock",
                                   "weight": "Bolder",
                                   "wrap": true
                                 },
                                 {
-                                  "text": " Incident No : ",
+                                  "text": " Incident No : @{triggerBody()?['object']?['id']}",
                                   "type": "TextBlock",
                                   "weight": "Bolder",
                                   "wrap": true
@@ -580,12 +595,12 @@
                                   "wrap": true
                                 },
                                 {
-                                  "text": "Suspicious URL - ",
+                                  "text": "Suspicious URL -@{triggerBody()?['object']?['properties']?['description']} ",
                                   "type": "TextBlock",
                                   "wrap": true
                                 },
                                 {
-                                  "text": "[Click here to view the Incident]()",
+                                  "text": "[Click here to view the Incident](@{triggerBody()?['object']?['properties']?['incidentUrl']})",
                                   "type": "TextBlock",
                                   "wrap": true
                                 },
@@ -709,7 +724,7 @@
                         "inputs": {
                           "host": {
                             "connection": {
-                              "name": "@parameters('$connections')['PaloAltoConnector_1']['connectionId']"
+                              "name": "@parameters('$connections')['PaloAltoConnector']['connectionId']"
                             }
                           },
                           "method": "get",
@@ -731,7 +746,7 @@
                         "inputs": {
                           "host": {
                             "connection": {
-                              "name": "@parameters('$connections')['PaloAltoConnector_1']['connectionId']"
+                              "name": "@parameters('$connections')['PaloAltoConnector']['connectionId']"
                             }
                           },
                           "method": "get",
@@ -785,7 +800,7 @@
                     },
                     "host": {
                       "connection": {
-                        "name": "@parameters('$connections')['PaloaltoWFConnector_1']['connectionId']"
+                        "name": "@parameters('$connections')['PaloaltoWFConnector']['connectionId']"
                       }
                     },
                     "method": "post",
@@ -868,7 +883,7 @@
                   {
                     "name": "apikey",
                     "type": "string",
-                    "value": "[parameters('WildFireAPIkey')]"
+                    "value": "1b2664d571ee864b5cfb34e60e132920"
                   }
                 ]
               },
@@ -953,7 +968,7 @@
                   {
                     "name": "securityPolicyRules",
                     "type": "string",
-                    "value": "[parameters('Security Poilcy rules')]"
+                    "value": "Acc Security Policy"
                   }
                 ]
               },
@@ -969,7 +984,7 @@
               "inputs": {
                 "body": {
                   "body": {
-                    "messageBody": "{\n    \"type\": \"AdaptiveCard\",\n    \"body\": [\n        {\n            \"type\": \"TextBlock\",\n            \"weight\": \"Bolder\",\n            \"text\": \"Below is the summary of actions taken on URL's by SOC\",\n            \"wrap\": true\n        },\n    {\n  \"separator\": \"true\",\n  \"type\": \"ColumnSet\",\n  \"width\": \"stretch\"\n},\n {\n    \"text\": \" Incident No :   \",\n    \"type\": \"TextBlock\",\n    \"weight\": \"Bolder\",\n    \"wrap\": true\n  },\n        {\n            \"type\": \"TextBlock\",\n            \"text\": \"[Click here to view the Incident]()\",\n            \"wrap\": true\n        },\n\n        {\n            \"type\": \"ColumnSet\",\n            \"columns\": [\n                {\n                    \"type\": \"Column\",\n                    \"items\": [\n                        {\n                            \"type\": \"TextBlock\",\n                            \"size\": \"Medium\",\n                            \"weight\": \"Bolder\",\n                            \"text\": \"Incident configuration :\",\n                            \"wrap\": true\n                        }\n                    ],\n                    \"width\": \"auto\"\n                }\n            ]\n        },\n        {\n            \"type\": \"ColumnSet\",\n            \"columns\": [\n                {\n                    \"type\": \"Column\",\n                    \"items\": [\n                        {\n                            \"type\": \"Image\",\n                            \"style\": \"Person\",\n                            \"url\": \"https://connectoricons-prod.azureedge.net/releases/v1.0.1391/1.0.1391.2130/azuresentinel/icon.png\",\n                            \"size\": \"Small\"\n                        }\n                    ],\n                    \"width\": \"auto\"\n                }\n            ]\n        },\n        {\n            \"type\": \"TextBlock\",\n            \"text\": \"Close Azure Sentinal incident?\"\n        },\n        {\n            \"choices\": [\n                {\n                    \"isSelected\": true,\n                    \"title\": \"False Positive - Inaccurate Data\",\n                    \"value\": \"False Positive - Inaccurate Data\"\n                },\n                {\n                    \"isSelected\": true,\n                    \"title\": \"False Positive - Incorrect Alert Logic\",\n                    \"value\": \"False Positive - Incorrect Alert Logic\"\n                },\n                {\n                    \"title\": \"True Positive - Suspicious Activity\",\n                    \"value\": \"True Positive - Suspicious Activity\"\n                },\n                {\n                    \"title\": \"Benign Positive - Suspicious But Expected\",\n                    \"value\": \"Benign Positive - Suspicious But Expected\"\n                },\n                {\n                    \"title\": \"Undetermined\",\n                    \"value\": \"Undetermined\"\n                }\n            ],\n            \"id\": \"incidentStatus\",\n            \"style\": \"compact\",\n            \"type\": \"Input.ChoiceSet\",\n            \"value\": \"Benign Positive - Suspicious But Expected\"\n        },\n        {\n            \"type\": \"TextBlock\",\n            \"text\": \"Change Azure Sentinel Incident Severity?\"\n        },\n        {\n            \"choices\": [\n                {\n                  \n                    \"title\": \"High\",\n                    \"value\": \"High\"\n                },\n                {\n                    \"title\": \"Medium\",\n                    \"value\": \"Medium\"\n                },\n                {\n                    \"title\": \"Low\",\n                    \"value\": \"Low\"\n                },\n                {\n                    \"title\": \"Don't change\",\n                    \"value\": \"same\"\n                }\n            ],\n            \"id\": \"incidentSeverity\",\n            \"style\": \"compact\",\n            \"type\": \"Input.ChoiceSet\",\n            \"value\": \"\"\n        }\n       \n     \n        \n    ],\n\"width\":\"auto\",\n   \"actions\": [\n                    {\n                        \"type\": \"Action.Submit\",\n                        \"title\": \"Change incident configuration\"\n                    },\n  {\n                        \"type\": \"Action.Submit\",\n                        \"title\": \"Ignore\"\n                    }\n   ],\n    \"$schema\": \"http://adaptivecards.io/schemas/adaptive-card.json\",\n    \"version\": \"1.2\"\n}",
+                    "messageBody": "{\n    \"type\": \"AdaptiveCard\",\n    \"body\": [\n        {\n            \"type\": \"TextBlock\",\n            \"weight\": \"Bolder\",\n            \"text\": \"Below is the summary of actions taken on URL's by SOC\",\n            \"wrap\": true\n        },\n    {\n  \"separator\": \"true\",\n  \"type\": \"ColumnSet\",\n  \"width\": \"stretch\"\n},\n {\n    \"text\": \" Incident No : @{triggerBody()?['object']?['id']}  \",\n    \"type\": \"TextBlock\",\n    \"weight\": \"Bolder\",\n    \"wrap\": true\n  },\n        {\n            \"type\": \"TextBlock\",\n            \"text\": \"[Click here to view the Incident](@{triggerBody()?['object']?['properties']?['incidentUrl']})\",\n            \"wrap\": true\n        },\n\n        {\n            \"type\": \"ColumnSet\",\n            \"columns\": [\n                {\n                    \"type\": \"Column\",\n                    \"items\": [\n                        {\n                            \"type\": \"TextBlock\",\n                            \"size\": \"Medium\",\n                            \"weight\": \"Bolder\",\n                            \"text\": \"Incident configuration :\",\n                            \"wrap\": true\n                        }\n                    ],\n                    \"width\": \"auto\"\n                }\n            ]\n        },\n        {\n            \"type\": \"ColumnSet\",\n            \"columns\": [\n                {\n                    \"type\": \"Column\",\n                    \"items\": [\n                        {\n                            \"type\": \"Image\",\n                            \"style\": \"Person\",\n                            \"url\": \"https://connectoricons-prod.azureedge.net/releases/v1.0.1391/1.0.1391.2130/azuresentinel/icon.png\",\n                            \"size\": \"Small\"\n                        }\n                    ],\n                    \"width\": \"auto\"\n                }\n            ]\n        },\n        {\n            \"type\": \"TextBlock\",\n            \"text\": \"Close Azure Sentinal incident?\"\n        },\n        {\n            \"choices\": [\n                {\n                    \"isSelected\": true,\n                    \"title\": \"False Positive - Inaccurate Data\",\n                    \"value\": \"False Positive - Inaccurate Data\"\n                },\n                {\n                    \"isSelected\": true,\n                    \"title\": \"False Positive - Incorrect Alert Logic\",\n                    \"value\": \"False Positive - Incorrect Alert Logic\"\n                },\n                {\n                    \"title\": \"True Positive - Suspicious Activity\",\n                    \"value\": \"True Positive - Suspicious Activity\"\n                },\n                {\n                    \"title\": \"Benign Positive - Suspicious But Expected\",\n                    \"value\": \"Benign Positive - Suspicious But Expected\"\n                },\n                {\n                    \"title\": \"Undetermined\",\n                    \"value\": \"Undetermined\"\n                }\n            ],\n            \"id\": \"incidentStatus\",\n            \"style\": \"compact\",\n            \"type\": \"Input.ChoiceSet\",\n            \"value\": \"Benign Positive - Suspicious But Expected\"\n        },\n        {\n            \"type\": \"TextBlock\",\n            \"text\": \"Change Azure Sentinel Incident Severity?\"\n        },\n        {\n            \"choices\": [\n                {\n                  \n                    \"title\": \"High\",\n                    \"value\": \"High\"\n                },\n                {\n                    \"title\": \"Medium\",\n                    \"value\": \"Medium\"\n                },\n                {\n                    \"title\": \"Low\",\n                    \"value\": \"Low\"\n                },\n                {\n                    \"title\": \"Don't change\",\n                    \"value\": \"same\"\n                }\n            ],\n            \"id\": \"incidentSeverity\",\n            \"style\": \"compact\",\n            \"type\": \"Input.ChoiceSet\",\n            \"value\": \"\"\n        }\n       \n     \n        \n    ],\n\"width\":\"auto\",\n   \"actions\": [\n                    {\n                        \"type\": \"Action.Submit\",\n                        \"title\": \"Change incident configuration\"\n                    },\n  {\n                        \"type\": \"Action.Submit\",\n                        \"title\": \"Ignore\"\n                    }\n   ],\n    \"$schema\": \"http://adaptivecards.io/schemas/adaptive-card.json\",\n    \"version\": \"1.2\"\n}",
                     "recipient": {
                       "channelId": "19:7abc1180c1d84a3fba83770e34231132@thread.tacv2"
                     },
@@ -979,7 +994,7 @@
                 },
                 "host": {
                   "connection": {
-                    "name": "@parameters('$connections')['teams_1']['connectionId']"
+                    "name": "@parameters('$connections')['teams']['connectionId']"
                   }
                 },
                 "path": "/flowbot/actions/flowcontinuation/recipienttypes/channel/$subscriptions",
