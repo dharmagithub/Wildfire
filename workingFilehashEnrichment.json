@@ -8,19 +8,22 @@
   "parameters": {
     "Playbook_Name": {
       "type": "string",
+      "defaultValue": "Wildfire-filehash-enrichment",
       "metadata": {
         "description": "Name of the Logic App/Playbook"
       }
 
     },
-    "LogicAppIntegrationAccount": {
+    "IngrationAccount_Name": {
       "type": "string",
+      "defaultValue": "IntegrationAccount",
       "metadata": {
         "description": "Name of the integartion Account"
       }
     },
     "WildFireAPIkey": {
       "type": "string",
+      "defaultValue": "djfsdhkdsf2687947k",
       "metadata": {
         "description": "Wild fire colud APIkey"
       }
@@ -37,7 +40,7 @@
       "properties": {
         "state": "Enabled",
         "integrationAccount": {
-          "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Logic/integrationAccounts/',parameters('LogicAppIntegrationAccount'))]"
+          "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Logic/integrationAccounts/',parameters('IngrationAccount_Name'))]"
         },
         "definition": {
           "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
@@ -46,27 +49,6 @@
             "$connections": {
               "defaultValue": {},
               "type": "Object"
-            }
-          },
-          "staticResults": {
-            "Entities_-_Get_FileHashes0": {
-              "status": "Succeeded",
-              "outputs": {
-                "body": {
-                  "Filehashes": [
-                    {
-                      "Algorithm": "SHA256",
-                      "Value": "dca86121cc7427e375fd24fe5871d727"
-                    },
-                    {
-                      "Algorithm": "SHA256",
-                      "Value": "544b7671482bc7557ac80b8a1bb21d247eb3c52c07d3917450569a770774fd99"
-                    }
-                  ]
-                },
-                "headers": {},
-                "statusCode": "OK"
-              }
             }
           },
           "triggers": {
@@ -100,18 +82,12 @@
                 "method": "post",
                 "path": "/entities/filehash"
               },
-              "description": "File hash entities received form sentinel",
-              "runtimeConfiguration": {
-                "staticResult": {
-                  "staticResultOptions": "Enabled",
-                  "name": "Entities_-_Get_FileHashes0"
-                }
-              }
+              "description": "File hash entities received form sentinel"
             },
             "For_each_comment_in_array": {
               "foreach": "@variables('finalconsoildatedcomments')",
               "actions": {
-                "Add_comment_to_incident_(V3)": {
+                "Add_comment_to_incident_(V3)_2": {
                   "runAfter": {},
                   "type": "ApiConnection",
                   "inputs": {
@@ -126,8 +102,7 @@
                     },
                     "method": "post",
                     "path": "/Incidents/Comment"
-                  },
-                  "description": "Comment added to the incident"
+                  }
                 }
               },
               "runAfter": {
