@@ -22,21 +22,23 @@
     },
     "WildFireAPIkey": {
       "type": "string",
+      "defaultValue": "djfsdhkdsf2687947k",
       "metadata": {
         "description": "Wild fire colud APIkey"
       }
     },
     "Security Poilcy rules": {
       "type": "string",
+      "defaultValue": "Acc security policy",
       "metadata": {
         "description": "PANOS Security Policy rules name"
       }
     }
   },
   "variables": {
-    "PaloaltoWFConnectionName": "[concat('PaloaltoWFConnector-', parameters('Playbook_Name'))]",
-    "PaloaltoConnectionName": "[concat('PaloaltoConnector-', parameters('Playbook_Name'))]",
-    "AzureSentinelConnectionName": "[concat('azuresentinel-', parameters('Playbook_Name'))]",
+    "PaloaltoWFConnectionName": "[concat('PaloaltoWFConnector-',parameters('Playbook_Name'))]",
+    "PaloaltoConnectionName": "[concat('PaloaltoConnector-',parameters('Playbook_Name'))]",
+    "AzureSentinelConnectionName": "[concat('azuresentinel-',parameters('Playbook_Name'))]",
     "TeamsConnectionName": "[concat('teamsconnector-', parameters('Playbook_Name'))]"
   },
   "resources": [
@@ -120,7 +122,7 @@
                 },
                 "host": {
                   "connection": {
-                    "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
+                    "name": "@parameters('$connections')['azuresentinel']['connectionId']"
                   }
                 },
                 "path": "/incident-creation"
@@ -135,17 +137,11 @@
                 "body": "@triggerBody()?['object']?['properties']?['relatedEntities']",
                 "host": {
                   "connection": {
-                    "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
+                    "name": "@parameters('$connections')['azuresentinel']['connectionId']"
                   }
                 },
                 "method": "post",
                 "path": "/entities/url"
-              },
-              "runtimeConfiguration": {
-                "staticResult": {
-                  "staticResultOptions": "Disabled",
-                  "name": "Entities_-_Get_URLs0"
-                }
               }
             },
             "For_each_each_URL": {
@@ -175,27 +171,7 @@
                       "type": "SetVariable",
                       "inputs": {
                         "name": "incidentComment",
-                        "value": "[[\"@body('Create_HTML_table')\"]"
-                      }
-                    },
-                    "Change_incident_status_(to_be_deprecated)": {
-                      "runAfter": {
-                        "Set_adaptive_card_body_in_array_variable_for_valid_verdict": [
-                          "Succeeded"
-                        ]
-                      },
-                      "type": "ApiConnection",
-                      "inputs": {
-                        "body": {
-                          "CloseReason": "TruePositive"
-                        },
-                        "host": {
-                          "connection": {
-                            "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
-                          }
-                        },
-                        "method": "put",
-                        "path": "/Case/@{encodeURIComponent(triggerBody()?['workspaceInfo']?['SubscriptionId'])}/@{encodeURIComponent(triggerBody()?['workspaceId'])}/@{encodeURIComponent(triggerBody()?['workspaceInfo']?['ResourceGroupName'])}/@{encodeURIComponent('Incident')}/@{encodeURIComponent(triggerBody()?['object']?['id'])}/Status/@{encodeURIComponent('Closed')}"
+                        "value": "@body('Create_HTML_table')"
                       }
                     },
                     "Create_HTML_table": {
@@ -249,6 +225,31 @@
                         ]
                       },
                       "description": "Set adaptive card body in array variable for valid verdict"
+                    },
+                    "Update_incident": {
+                      "runAfter": {
+                        "Set_adaptive_card_body_in_array_variable_for_valid_verdict": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "ApiConnection",
+                      "inputs": {
+                        "body": {
+                          "classification": {
+                            "ClassificationAndReason": "TruePositive - SuspiciousActivity"
+                          },
+                          "incidentArmId": "@triggerBody()?['object']?['id']",
+                          "severity": "@triggerBody()?['object']?['properties']?['severity']",
+                          "status": "Closed"
+                        },
+                        "host": {
+                          "connection": {
+                            "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                          }
+                        },
+                        "method": "put",
+                        "path": "/Incidents"
+                      }
                     }
                   },
                   "runAfter": {
@@ -303,7 +304,7 @@
                               },
                               "host": {
                                 "connection": {
-                                  "name": "@parameters('$connections')['PaloAltoConnector_1']['connectionId']"
+                                  "name": "@parameters('$connections')['PaloAltoConnector']['connectionId']"
                                 }
                               },
                               "method": "put",
@@ -424,7 +425,7 @@
                                 },
                                 "host": {
                                   "connection": {
-                                    "name": "@parameters('$connections')['PaloAltoConnector_1']['connectionId']"
+                                    "name": "@parameters('$connections')['PaloAltoConnector']['connectionId']"
                                   }
                                 },
                                 "method": "post",
@@ -472,7 +473,7 @@
                         "inputs": {
                           "host": {
                             "connection": {
-                              "name": "@parameters('$connections')['PaloAltoConnector_1']['connectionId']"
+                              "name": "@parameters('$connections')['PaloAltoConnector']['connectionId']"
                             }
                           },
                           "method": "get",
@@ -494,7 +495,7 @@
                         "inputs": {
                           "host": {
                             "connection": {
-                              "name": "@parameters('$connections')['PaloAltoConnector_1']['connectionId']"
+                              "name": "@parameters('$connections')['PaloAltoConnector']['connectionId']"
                             }
                           },
                           "method": "get",
@@ -516,7 +517,20 @@
                         "type": "SetVariable",
                         "inputs": {
                           "name": "InformativeAdaptiveCardBody",
-                          "value": "[[\n  {\n    \"size\": \"Large\",\n    \"text\": \"URL- Azure Sentinel\",\n    \"type\": \"TextBlock\",\n    \"weight\": \"Bolder\",\n    \"wrap\": true\n  },\n  {\n    \"text\": \"@{body('Entities_-_Get_URLs')?['URLs']}\" is having invalid verdict value. URL has been Blocked\",\n    \"type\": \"TextBlock\",\n    \"wrap\": true\n  }\n]"
+                          "value": [
+                            {
+                              "size": "Large",
+                              "text": "URL- Azure Sentinel",
+                              "type": "TextBlock",
+                              "weight": "Bolder",
+                              "wrap": true
+                            },
+                            {
+                              "text": "@{items('For_each_each_URL')?['Url']} is having valid verdict value. URL is not Blocked",
+                              "type": "TextBlock",
+                              "wrap": true
+                            }
+                          ]
                         },
                         "description": "Set adaptive card body in array variable for In-valid verdict"
                       },
@@ -561,7 +575,7 @@
                     },
                     "host": {
                       "connection": {
-                        "name": "@parameters('$connections')['PaloaltoWFConnector_1']['connectionId']"
+                        "name": "@parameters('$connections')['PaloaltoWFConnector']['connectionId']"
                       }
                     },
                     "method": "post",
@@ -636,21 +650,31 @@
               "foreach": "@variables('finalConsolidatedcomments')",
               "actions": {
                 "Add_comment_to_incident_(V3)": {
-                  "runAfter": {},
+                  "runAfter": {
+                    "Add_icon_to_each_comments": [
+                      "Succeeded"
+                    ]
+                  },
                   "type": "ApiConnection",
                   "inputs": {
                     "body": {
                       "incidentArmId": "@triggerBody()?['object']?['id']",
-                      "message": "<p>@{item()}</p>"
+                      "message": "<p><br>\n@{outputs('Add_icon_to_each_comments')}@{item()}</p>"
                     },
                     "host": {
                       "connection": {
-                        "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
+                        "name": "@parameters('$connections')['azuresentinel']['connectionId']"
                       }
                     },
                     "method": "post",
                     "path": "/Incidents/Comment"
                   }
+                },
+                "Add_icon_to_each_comments": {
+                  "runAfter": {},
+                  "type": "Compose",
+                  "inputs": "<img src=\"https://pan.dev/img/PANW_Parent_Brand_Peelable_RGB_Red.svg\",alt=\"Lamp\" width=\"32\" height=\"32\" />",
+                  "description": "Add icon to each comments"
                 }
               },
               "runAfter": {
@@ -672,7 +696,7 @@
                   {
                     "name": "apikey",
                     "type": "string",
-                    "value": "[parameters('WildFireAPIkey')]"
+                    "value": "1b2664d571ee864b5cfb34e60e132920"
                   }
                 ]
               },
@@ -757,7 +781,7 @@
                   {
                     "name": "securityPolicyRules",
                     "type": "string",
-                    "value": "[parameters('Security Poilcy rules')]"
+                    "value": "Acc Security Policy"
                   }
                 ]
               },
@@ -781,7 +805,7 @@
                 },
                 "host": {
                   "connection": {
-                    "name": "@parameters('$connections')['teams_1']['connectionId']"
+                    "name": "@parameters('$connections')['teams']['connectionId']"
                   }
                 },
                 "method": "post",
