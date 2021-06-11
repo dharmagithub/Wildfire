@@ -10,22 +10,22 @@
       "type": "string",
       "defaultValue": "Wildfire-filehash-enrichment",
       "metadata": {
-        "description": "Name of the Logic App/Playbook"
+        "description": "Enter name of the Logic App/Playbook"
       }
 
     },
-    "IngrationAccount_Name": {
-      "type": "string",
-      "defaultValue": "IntegrationAccount",
-      "metadata": {
-        "description": "Name of the integartion Account"
-      }
-    },
-    "WildFireAPIkey": {
-      "type": "string",
+    "Wildfire_APIkey": {
+      "type": "securestring",
       "defaultValue": "djfsdhkdsf2687947k",
       "metadata": {
-        "description": "Wild fire colud APIkey"
+        "description": "Enter the Wildfire colud APIkey"
+      }
+    },
+    "Notification_DL OR SOC_Email": {
+      "type": "string",
+      "defaultValue": "logicapp_connector_team_@microsoft.com",
+      "metadata": {
+        "description": "Enter the Nofication DL or SOC Email"
       }
     }
   },
@@ -39,9 +39,6 @@
     {
       "properties": {
         "state": "Enabled",
-        "integrationAccount": {
-          "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Logic/integrationAccounts/',parameters('IngrationAccount_Name'))]"
-        },
         "definition": {
           "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
           "contentVersion": "1.0.0.0",
@@ -49,6 +46,15 @@
             "$connections": {
               "defaultValue": {},
               "type": "Object"
+            }
+          },
+          "staticResults": {
+            "Entities_-_Get_FileHashes0": {
+              "status": "Succeeded",
+              "outputs": {
+                "headers": {},
+                "statusCode": "OK"
+              }
             }
           },
           "triggers": {
@@ -69,6 +75,16 @@
             }
           },
           "actions": {
+            "Add_icon_to_each_comments": {
+              "runAfter": {
+                "Initialize_variable_for_SOC_user": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": "<img src=\"https://ucarecdn.com/21ded4b2-d2d8-48b6-862e-f00a9ba73825/-/crop/321x248/0,0/-/preview/\",alt=\"Lamp\" width=\"32\" height=\"32\" />",
+              "description": "Add icon to each comments"
+            },
             "Entities_-_Get_FileHashes": {
               "runAfter": {},
               "type": "ApiConnection",
@@ -82,27 +98,70 @@
                 "method": "post",
                 "path": "/entities/filehash"
               },
-              "description": "File hash entities received form sentinel"
+              "description": "File hash entities received form sentinel",
+              "runtimeConfiguration": {
+                "staticResult": {
+                  "staticResultOptions": "Disabled",
+                  "name": "Entities_-_Get_FileHashes0"
+                }
+              }
             },
             "For_each_comment_in_array": {
               "foreach": "@variables('finalconsoildatedcomments')",
               "actions": {
-                "Add_comment_to_incident_(V3)_2": {
-                  "runAfter": {},
-                  "type": "ApiConnection",
-                  "inputs": {
-                    "body": {
-                      "incidentArmId": "@triggerBody()?['object']?['id']",
-                      "message": "<p>@{item()}</p>"
-                    },
-                    "host": {
-                      "connection": {
-                        "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                "check_comment_length_exceed_maximum_": {
+                  "actions": {
+                    "Add_comment_to_incident_(V3)_2": {
+                      "runAfter": {},
+                      "type": "ApiConnection",
+                      "inputs": {
+                        "body": {
+                          "incidentArmId": "@triggerBody()?['object']?['id']",
+                          "message": "<p>@{outputs('Add_icon_to_each_comments')}@{replace(item(),'﻿<?xml version=\"1.0\" encoding=\"utf-8\"?>',' ')}</p>"
+                        },
+                        "host": {
+                          "connection": {
+                            "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                          }
+                        },
+                        "method": "post",
+                        "path": "/Incidents/Comment"
                       }
-                    },
-                    "method": "post",
-                    "path": "/Incidents/Comment"
-                  }
+                    }
+                  },
+                  "runAfter": {},
+                  "else": {
+                    "actions": {
+                      "Add_comment_to_incident_(V3)": {
+                        "runAfter": {},
+                        "type": "ApiConnection",
+                        "inputs": {
+                          "body": {
+                            "incidentArmId": "@triggerBody()?['object']?['id']",
+                            "message": "<p>@{outputs('Add_icon_to_each_comments')}Report information is exceeding the maximum limit. Please refer the PDF format report provided over mail.</p>"
+                          },
+                          "host": {
+                            "connection": {
+                              "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
+                            }
+                          },
+                          "method": "post",
+                          "path": "/Incidents/Comment"
+                        }
+                      }
+                    }
+                  },
+                  "expression": {
+                    "and": [
+                      {
+                        "less": [
+                          "@length(item())",
+                          3000
+                        ]
+                      }
+                    ]
+                  },
+                  "type": "If"
                 }
               },
               "runAfter": {
@@ -151,15 +210,15 @@
                         "columns": [
                           {
                             "header": "sha256",
-                            "value": "@item()?['sha256']"
+                            "value": "@body('Parse_JSON_of_verdict')?['get-verdict-info']?['sha256']"
                           },
                           {
                             "header": "verdict",
-                            "value": "@item()?['verdict']"
+                            "value": "@body('Parse_JSON_of_verdict')?['get-verdict-info']?['verdict']"
                           },
                           {
                             "header": "md5",
-                            "value": "@item()?['md5']"
+                            "value": "@body('Parse_JSON_of_verdict')?['get-verdict-info']?['md5']"
                           }
                         ],
                         "format": "HTML",
@@ -175,38 +234,235 @@
                   },
                   "else": {
                     "actions": {
+                      "Add_Incident_URL_to_Email": {
+                        "runAfter": {
+                          "_Generate_analysis_report_for_file_hash_in_PDF_format": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "Compose",
+                        "inputs": "<a href=\"@{triggerBody()?['object']?['properties']?['incidentUrl']}\">click here to view the incident</a>",
+                        "description": "Add Incident URL to Email"
+                      },
                       "Assign_result_to_valid_report_info_to_variable": {
                         "runAfter": {
-                          "Converting_XML_Report_to_HTML": [
+                          "Create_HTML_task_info_table": [
                             "Succeeded"
                           ]
                         },
                         "type": "SetVariable",
                         "inputs": {
                           "name": "IncidentComment",
-                          "value": "@{body('Converting_XML_Report_to_HTML')}"
+                          "value": "Please find the below details for verdict summary report of filehash(s) and PDF format has been sent through mail.\n\n   File_info details\n@{body('Create_HTML_File_info_table')}\n Task_info Details\n\n@{body('Create_HTML_task_info_table')}"
                         }
                       },
-                      "Converting_XML_Report_to_HTML": {
+                      "Construct_report_in_JSON_format": {
                         "runAfter": {
                           "_Generate_analysis_report_for_file_hash_in_XML_format": [
                             "Succeeded"
                           ]
                         },
-                        "type": "Xslt",
+                        "type": "SetVariable",
                         "inputs": {
-                          "content": "@{body('_Generate_analysis_report_for_file_hash_in_XML_format')}",
-                          "integrationAccount": {
-                            "map": {
-                              "name": "reportxslt"
-                            }
-                          }
+                          "name": "ReportJSONObject",
+                          "value": "@json(xml(body('_Generate_analysis_report_for_file_hash_in_XML_format')))"
                         },
-                        "description": "Convert XML format report into HTML and send to incident"
+                        "description": "Construct report in JSON format"
+                      },
+                      "Create_HTML_File_info_table": {
+                        "runAfter": {
+                          "Parse_Report_JSON": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "Table",
+                        "inputs": {
+                          "columns": [
+                            {
+                              "header": "Filesigner",
+                              "value": "@body('Parse_Report_JSON')?['wildfire']?['file_info']?['file_signer']"
+                            },
+                            {
+                              "header": "filetype",
+                              "value": "@body('Parse_Report_JSON')?['wildfire']?['file_info']?['filetype']"
+                            },
+                            {
+                              "header": "malware",
+                              "value": "@body('Parse_Report_JSON')?['wildfire']?['file_info']?['malware']"
+                            },
+                            {
+                              "header": "Filehash",
+                              "value": "@body('Parse_Report_JSON')?['wildfire']?['file_info']?['md5']"
+                            },
+                            {
+                              "header": "Alogorthim",
+                              "value": "@body('Parse_Report_JSON')?['wildfire']?['file_info']?['sha256']"
+                            },
+                            {
+                              "header": "size",
+                              "value": "@body('Parse_Report_JSON')?['wildfire']?['file_info']?['size']"
+                            }
+                          ],
+                          "format": "HTML",
+                          "from": "@createArray(body('Parse_Report_JSON')?['wildfire']?['file-info'])"
+                        }
+                      },
+                      "Create_HTML_task_info_table": {
+                        "runAfter": {
+                          "Create_HTML_File_info_table": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "Table",
+                        "inputs": {
+                          "columns": [
+                            {
+                              "header": "Version",
+                              "value": "@item()?['version']"
+                            },
+                            {
+                              "header": "Platform",
+                              "value": "@item()?['platform']"
+                            },
+                            {
+                              "header": "Software",
+                              "value": "@item()?['software']"
+                            },
+                            {
+                              "header": "Malware",
+                              "value": "@item()?['malware']"
+                            },
+                            {
+                              "header": "Summary",
+                              "value": "@replace(replace(replace(replace(string(item()?['summary']?['entry']),'[',''),']',''),'\"',''),',','\r\n')"
+                            }
+                          ],
+                          "format": "HTML",
+                          "from": "@body('Parse_Report_JSON')?['wildfire']?['task_info']?['report']"
+                        }
+                      },
+                      "Parse_Report_JSON": {
+                        "runAfter": {
+                          "Construct_report_in_JSON_format": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "ParseJson",
+                        "inputs": {
+                          "content": "@variables('ReportJSONObject')",
+                          "schema": {
+                            "properties": {
+                              "wildfire": {
+                                "properties": {
+                                  "file_info": {
+                                    "properties": {
+                                      "file_signer": {
+                                        "description": "File_signer of the verdict file_info report",
+                                        "type": "string"
+                                      },
+                                      "filetype": {
+                                        "description": "filetype of the verdict file_info report",
+                                        "type": "string"
+                                      },
+                                      "malware": {
+                                        "description": "malware of the verdict file_info report",
+                                        "type": "string"
+                                      },
+                                      "md5": {
+                                        "description": "md5 of the verdict file_info report",
+                                        "type": "string"
+                                      },
+                                      "sha1": {
+                                        "description": "sha1 of the verdict file_info report",
+                                        "type": "string"
+                                      },
+                                      "sha256": {
+                                        "description": "sha256 of the verdict file_info report",
+                                        "type": "string"
+                                      },
+                                      "size": {
+                                        "description": "size of the verdict file_info report",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "type": "object"
+                                  },
+                                  "task_info": {
+                                    "properties": {
+                                      "report": {
+                                        "items": {
+                                          "properties": {
+                                            "malware": {
+                                              "description": "malware of the verdict  task_info report",
+                                              "type": "string"
+                                            },
+                                            "md5": {
+                                              "description": "md5 of the verdict  task_info report",
+                                              "type": "string"
+                                            },
+                                            "platform": {
+                                              "description": "platform of the verdict  task_info report",
+                                              "type": "string"
+                                            },
+                                            "sha256": {
+                                              "description": "sha256 of the verdict  task_info report",
+                                              "type": "string"
+                                            },
+                                            "size": {
+                                              "description": "size of the verdict task_info report",
+                                              "type": "string"
+                                            },
+                                            "software": {
+                                              "description": "software of the verdict task_info report",
+                                              "type": "string"
+                                            },
+                                            "summary": {
+                                              "properties": {
+                                                "entry": {
+                                                  "items": {
+                                                    "description": "software of the verdict task_info report",
+                                                    "type": "string"
+                                                  },
+                                                  "type": "array"
+                                                }
+                                              },
+                                              "type": "object"
+                                            },
+                                            "version": {
+                                              "description": "version of the verdict task_info report",
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "version",
+                                            "platform",
+                                            "software",
+                                            "sha256",
+                                            "md5",
+                                            "malware",
+                                            "summary"
+                                          ],
+                                          "type": "object"
+                                        },
+                                        "type": "array"
+                                      }
+                                    },
+                                    "type": "object"
+                                  },
+                                  "version": {
+                                    "type": "string"
+                                  }
+                                },
+                                "type": "object"
+                              }
+                            },
+                            "type": "object"
+                          }
+                        }
                       },
                       "Send_an_email_for_the_file_hash": {
                         "runAfter": {
-                          "_Generate_analysis_report_for_file_hash_in_PDF_format": [
+                          "Add_Incident_URL_to_Email": [
                             "Succeeded"
                           ]
                         },
@@ -216,12 +472,12 @@
                             "Attachments": [
                               {
                                 "ContentBytes": "@{base64(body('_Generate_analysis_report_for_file_hash_in_PDF_format'))}",
-                                "Name": ".@{items('For_each_file_hash')?['Value']}.pdf"
+                                "Name": "@{items('For_each_file_hash')?['Value']}.pdf"
                               }
                             ],
-                            "Body": "<p>Hi All,<br>\n<br>\nPlease find the attached document for the file hash report@{items('For_each_file_hash')?['Value']} .<br>\n<br>\nThank you,<br>\nWildfire Team</p>",
-                            "Subject": "Do not reply : Report for the file hash @{items('For_each_file_hash')?['Value']}",
-                            "To": "v-ashokmy@microsoft.com"
+                            "Body": "<p>Hi,<br>\n<br>\n@{outputs('Add_icon_to_each_comments')}As part of the &nbsp;@{triggerBody()?['object']?['properties']?['incidentNumber']}, the summary of the File Hash verdict report is updated in the comments and the complete verdict report is attached in this email for reference.<br>\n<br>\n<strong>Additional details</strong>:<br>\n&nbsp;&nbsp;&nbsp;&nbsp;Incident Title --&gt; @{triggerBody()?['object']?['properties']?['title']}<br>\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;File Hash --&gt; @{items('For_each_file_hash')?['Value']}<br>\n<br>\n@{outputs('Add_Incident_URL_to_Email')}<br>\n<br>\n<br>\n<br>\n</p>",
+                            "Subject": "INC#:@{triggerBody()?['object']?['properties']?['incidentNumber']} @{items('For_each_file_hash')?['Value']}-WildFire Analysis Report",
+                            "To": "@{variables('SOC_Email')};@{triggerBody()?['object']?['properties']?['owner']?['email']}"
                           },
                           "host": {
                             "connection": {
@@ -239,7 +495,7 @@
                         "inputs": {
                           "body": {
                             "apikey": "@variables('apikey')",
-                            "format": "xml",
+                            "format": "pdf",
                             "hash": "@items('For_each_file_hash')?['Value']"
                           },
                           "headers": {
@@ -287,13 +543,32 @@
                     "and": [
                       {
                         "equals": [
-                          "@int(body('Parse_JSON_of_Verdict')?['verdict'])",
+                          "@int(body('Parse_JSON_of_verdict')?['get-verdict-info']?['verdict'])",
                           0
                         ]
                       }
                     ]
                   },
                   "type": "If"
+                },
+                "Contract_JSON_object_for_verdict": {
+                  "runAfter": {
+                    "Create_Verdict_for_file_hash": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "VerdictJSON",
+                    "value": {
+                      "get-verdict-info": {
+                        "md5": "@json(xml(body('Create_Verdict_for_file_hash')))['wildfire']['get-verdict-info']['md5']",
+                        "sha256": "@json(xml(body('Create_Verdict_for_file_hash')))['wildfire']['get-verdict-info']['sha256']",
+                        "verdict": "@json(xml(body('Create_Verdict_for_file_hash')))['wildfire']['get-verdict-info']['verdict']"
+                      }
+                    }
+                  },
+                  "description": "Construct JSON object for XML"
                 },
                 "Create_Verdict_for_file_hash": {
                   "runAfter": {},
@@ -318,13 +593,13 @@
                 },
                 "Parse_JSON_of_verdict": {
                   "runAfter": {
-                    "Transform_verdict_XML_to_JSON": [
+                    "Contract_JSON_object_for_verdict": [
                       "Succeeded"
                     ]
                   },
                   "type": "ParseJson",
                   "inputs": {
-                    "content": "@body('Transform_verdict_XML_to_JSON')",
+                    "content": "@variables('VerdictJSON')",
                     "schema": {
                       "properties": {
                         "get-verdict-info": {
@@ -349,33 +624,32 @@
                     }
                   },
                   "description": "Parse JSON of the verdict generated for the file hash "
-                },
-                "Transform_verdict_XML_to_JSON": {
-                  "runAfter": {
-                    "Create_Verdict_for_file_hash": [
-                      "Succeeded"
-                    ]
-                  },
-                  "type": "Liquid",
-                  "kind": "XmlToJson",
-                  "inputs": {
-                    "content": "@{body('Create_Verdict_for_file_hash')}",
-                    "integrationAccount": {
-                      "map": {
-                        "name": "Verdict"
-                      }
-                    }
-                  },
-                  "description": "Convert verdict XML into JSON format"
                 }
               },
               "runAfter": {
-                "Initialize_array_variable_final_comment": [
+                "Add_icon_to_each_comments": [
                   "Succeeded"
                 ]
               },
               "type": "Foreach",
               "description": "For each file hash associated entities "
+            },
+            "Initialize_Object_to_construct_JSON_report": {
+              "runAfter": {
+                "Entities_-_Get_FileHashes": [
+                  "Succeeded"
+                ]
+              },
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "ReportJSONObject",
+                    "type": "object"
+                  }
+                ]
+              },
+              "description": "Initialize Object to construct JSON report"
             },
             "Initialize_array_variable_final_comment": {
               "runAfter": {
@@ -393,6 +667,23 @@
                 ]
               },
               "description": "Initialize array variable to append consolidated comments "
+            },
+            "Initialize_object_variable_to_create_verdict_JSON": {
+              "runAfter": {
+                "Initialize_Object_to_construct_JSON_report": [
+                  "Succeeded"
+                ]
+              },
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "VerdictJSON",
+                    "type": "object"
+                  }
+                ]
+              },
+              "description": "store verdict JOSN object"
             },
             "Initialize_string_variable_for_the_incident_comment": {
               "runAfter": {
@@ -413,7 +704,7 @@
             },
             "Initialize_string_variable_to_store_apikey": {
               "runAfter": {
-                "Entities_-_Get_FileHashes": [
+                "Initialize_object_variable_to_create_verdict_JSON": [
                   "Succeeded"
                 ]
               },
@@ -423,11 +714,29 @@
                   {
                     "name": "apikey",
                     "type": "string",
-                    "value": "[parameters('WildFireAPIkey')]"
+                    "value": "[parameters('Wildfire_APIkey')]"
                   }
                 ]
               },
               "description": "Initialize string variable to store apikey because wildfire api's except apikey as a  parameter in the form of  data  "
+            },
+            "Initialize_variable_for_SOC_user": {
+              "runAfter": {
+                "Initialize_array_variable_final_comment": [
+                  "Succeeded"
+                ]
+              },
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "SOC_Email",
+                    "type": "string",
+                    "value": "[parameters('Notification_DL OR SOC_Email')]"
+                  }
+                ]
+              },
+              "description": "Initialize variable for SOC user"
             }
           },
           "outputs": {}
@@ -436,19 +745,19 @@
           "$connections": {
             "value": {
               "PaloaltoWFConnector": {
-                "id": "[resourceId('Microsoft.Web/customApis', 'PaloaltoWFConnector')]",
-                "connectionId": "[resourceId('Microsoft.Web/connections', variables('AzureSentinelConnectionName'))]",
-                "connectionName": "[variables('AzureSentinelConnectionName')]"
+                "connectionId": "[resourceId('Microsoft.Web/connections', variables('WildfireConnectorConnectionName'))]",
+                "connectionName": "[variables('WildfireConnectorConnectionName')]",
+                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Web/customApis/PaloaltoWFConnector')]"
               },
               "azuresentinel": {
-                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', 'eastus', '/managedApis/', 'azuresentinel')]",
-                "connectionId": "[resourceId('Microsoft.Web/connections', variables('WildfireConnectorConnectionName'))]",
-                "connectionName": "[variables('WildfireConnectorConnectionName')]"
+                "connectionId": "[resourceId('Microsoft.Web/connections', variables('AzureSentinelConnectionName'))]",
+                "connectionName": "[variables('AzureSentinelConnectionName')]",
+                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azuresentinel')]"
               },
               "office365": {
-                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', 'eastus', '/managedApis/', 'office365')]",
                 "connectionId": "[resourceId('Microsoft.Web/connections', variables('OutlookConnectionName'))]",
-                "connectionName": "[variables('OutlookConnectionName')]"
+                "connectionName": "[variables('OutlookConnectionName')]",
+                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/office365')]"
               }
             }
           }
