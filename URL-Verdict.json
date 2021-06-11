@@ -10,30 +10,31 @@
       "defaultValue": "Wildfire-URL-verdict",
       "type": "string",
       "metadata": {
-        "description": "Name of the Logic App/Playbook"
+        "description": "enter name of the Logic App/Playbook"
       }
     },
-    "IngrationAccount_Name": {
-      "defaultValue": "IntegrationAccount",
-      "type": "string",
+    "PaloAlto_PAN-OS_CustomConnector_Name": {
+      "defaultValue": "PaloAltoConnector",
+      "type": "String",
       "metadata": {
-        "description": "Name of the integration account for the mappers"
+        "description": "Enter the connector name"
       }
     },
-    "WildFireAPIkey": {
-      "type": "string",
+    "Wildfire_APIkey": {
+      "type": "securestring",
       "defaultValue": "djfsdhkdsf2687947k",
       "metadata": {
-        "description": "Wild fire colud APIkey"
+        "description": "Enter the Wildfire colud APIkey"
       }
     },
-    "Security Poilcy rules": {
+    "Security_Poilcy_rule": {
       "type": "string",
       "defaultValue": "Acc security policy",
       "metadata": {
-        "description": "PANOS Security Policy rules name"
+        "description": "Enter Security Policy rule name"
       }
     }
+
   },
   "variables": {
     "PaloaltoWFConnectionName": "[concat('PaloaltoWFConnector-',parameters('Playbook_Name'))]",
@@ -62,7 +63,7 @@
       "properties": {
         "customParameterValues": {},
         "api": {
-          "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Web/customApis/PaloAltoConnector')]"
+          "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Web/customApis/',parameters('PaloAlto_PAN-OS_CustomConnector_Name'))]"
         }
       }
     },
@@ -101,9 +102,6 @@
       ],
       "properties": {
         "state": "Enabled",
-        "integrationAccount": {
-          "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Logic/integrationAccounts/',parameters('IngrationAccount_Name'))]"
-        },
         "definition": {
           "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
           "contentVersion": "1.0.0.0",
@@ -111,6 +109,15 @@
             "$connections": {
               "defaultValue": {},
               "type": "Object"
+            }
+          },
+          "staticResults": {
+            "Entities_-_Get_URLs0": {
+              "status": "Succeeded",
+              "outputs": {
+                "headers": {},
+                "statusCode": "OK"
+              }
             }
           },
           "triggers": {
@@ -130,6 +137,19 @@
             }
           },
           "actions": {
+            "Append_comments_to_an_consolidated_array": {
+              "runAfter": {
+                "Set_adaptive_card_body_in_array_variable_for_In-valid_verdict": [
+                  "Succeeded"
+                ]
+              },
+              "type": "AppendToArrayVariable",
+              "inputs": {
+                "name": "finalConsolidatedcomments",
+                "value": "@variables('incidentComment')"
+              },
+              "description": "consolidate comments of each iteration to update to incident"
+            },
             "Entities_-_Get_URLs": {
               "runAfter": {},
               "type": "ApiConnection",
@@ -142,39 +162,32 @@
                 },
                 "method": "post",
                 "path": "/entities/url"
+              },
+              "runtimeConfiguration": {
+                "staticResult": {
+                  "staticResultOptions": "Disabled",
+                  "name": "Entities_-_Get_URLs0"
+                }
               }
             },
             "For_each_each_URL": {
               "foreach": "@body('Entities_-_Get_URLs')?['URLs']",
               "actions": {
-                "Append_comments_to_an_array": {
-                  "runAfter": {
-                    "Check_verdict_code_of_an_URL": [
-                      "Succeeded"
-                    ]
-                  },
-                  "type": "AppendToArrayVariable",
-                  "inputs": {
-                    "name": "finalConsolidatedcomments",
-                    "value": "@variables('incidentComment')"
-                  },
-                  "description": "consolidate comments of each iteration to update to incident"
-                },
                 "Check_verdict_code_of_an_URL": {
                   "actions": {
                     "Add_comment_for_incident": {
                       "runAfter": {
-                        "Create_HTML_table": [
+                        "Create_HTML_table_for_valid_verdict": [
                           "Succeeded"
                         ]
                       },
                       "type": "SetVariable",
                       "inputs": {
                         "name": "incidentComment",
-                        "value": "@body('Create_HTML_table')"
+                        "value": "<b>Below table provides the list of Benign URL(s) that are associated with incident.</b>\n@{body('Create_HTML_table_for_valid_verdict')}"
                       }
                     },
-                    "Create_HTML_table": {
+                    "Create_HTML_table_for_valid_verdict": {
                       "runAfter": {},
                       "type": "Table",
                       "inputs": {
@@ -325,18 +338,18 @@
                               "value": "@items('For_each_each_URL')?['Url']"
                             }
                           },
-                          "Update_the_incident_comment_for_newly_created_address_object": {
+                          "Append_to_URL's_into_array_variable": {
                             "runAfter": {
                               "Add_address_objects_to_security_policy_rules": [
                                 "Succeeded"
                               ]
                             },
-                            "type": "SetVariable",
+                            "type": "AppendToArrayVariable",
                             "inputs": {
-                              "name": "incidentComment",
-                              "value": "[[URL: Address object has been created for @{items('For_each_each_URL')?['Url']} and added to security rules@{variables('securityPolicyRules')} successfully]"
+                              "name": "VerdictURLs",
+                              "value": "@items('For_each_each_URL')?['Url']"
                             },
-                            "description": "Add appropriate comment to incident"
+                            "description": "Append URL's into array"
                           }
                         },
                         "runAfter": {
@@ -367,14 +380,14 @@
                         "actions": {
                           "Check_if_URL_is_a_part_of_security_rules": {
                             "actions": {
-                              "Update_the_incident_comment_for_already_exist_URL": {
+                              "Append_URLs_to_an_array_variable": {
                                 "runAfter": {},
-                                "type": "SetVariable",
+                                "type": "AppendToArrayVariable",
                                 "inputs": {
-                                  "name": "incidentComment",
-                                  "value": "URL: Address object has been created for @{items('For_each_each_URL')?['Url']} and added to @{variables('securityPolicyRules')}security rules "
+                                  "name": "VerdictURLs",
+                                  "value": "@body('Parse_verdict_JSON')?['get-verdict-info']?['url']"
                                 },
-                                "description": "Add comment to incident comment variable to enrich incident"
+                                "description": "Append URL's to existing address object"
                               }
                             },
                             "runAfter": {
@@ -456,7 +469,7 @@
                       },
                       "Filter_address_object_array": {
                         "runAfter": {
-                          "Set_array_variable_with_existing_member": [
+                          "Get_the_member_of_the_security_rules": [
                             "Succeeded"
                           ]
                         },
@@ -507,45 +520,6 @@
                           }
                         },
                         "description": "Fetch the existing member of the security rules "
-                      },
-                      "Set_adaptive_card_body_in_array_variable_for_In-valid_verdict": {
-                        "runAfter": {
-                          "Check_If_URL_should_block": [
-                            "Succeeded"
-                          ]
-                        },
-                        "type": "SetVariable",
-                        "inputs": {
-                          "name": "InformativeAdaptiveCardBody",
-                          "value": [
-                            {
-                              "size": "Large",
-                              "text": "URL- Azure Sentinel",
-                              "type": "TextBlock",
-                              "weight": "Bolder",
-                              "wrap": true
-                            },
-                            {
-                              "text": "@{items('For_each_each_URL')?['Url']} is having valid verdict value. URL is not Blocked",
-                              "type": "TextBlock",
-                              "wrap": true
-                            }
-                          ]
-                        },
-                        "description": "Set adaptive card body in array variable for In-valid verdict"
-                      },
-                      "Set_array_variable_with_existing_member": {
-                        "runAfter": {
-                          "Get_the_member_of_the_security_rules": [
-                            "Succeeded"
-                          ]
-                        },
-                        "type": "SetVariable",
-                        "inputs": {
-                          "name": "distinationMembers",
-                          "value": "@body('Get_the_member_of_the_security_rules')?['result']?['entry']?[0]?['destination']?['member']"
-                        },
-                        "description": "Set array variable with existing member in the security policy"
                       }
                     }
                   },
@@ -553,14 +527,34 @@
                     "and": [
                       {
                         "equals": [
-                          "@body('Parse_verdict_JSON')?['get-verdict-info']?['verdict']",
-                          "@string(0)"
+                          "@int(body('Parse_verdict_JSON')?['get-verdict-info']?['verdict'])",
+                          0
                         ]
                       }
                     ]
                   },
                   "type": "If",
                   "description": "Apply condition on verdict info of an URL"
+                },
+                "Contract_JSON_object_for_verdict": {
+                  "runAfter": {
+                    "Create_Verdict_for_url": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "VerdictJSON",
+                    "value": {
+                      "get-verdict-info": {
+                        "analysis_time": "@json(xml(body('Create_Verdict_for_url')))['wildfire']['get-verdict-info']['analysis_time']",
+                        "url": "@json(xml(body('Create_Verdict_for_url')))['wildfire']['get-verdict-info']['url']",
+                        "valid": "@json(xml(body('Create_Verdict_for_url')))['wildfire']['get-verdict-info']['valid']",
+                        "verdict": "@json(xml(body('Create_Verdict_for_url')))['wildfire']['get-verdict-info']['verdict']"
+                      }
+                    }
+                  },
+                  "description": "Construct JSON object for XML"
                 },
                 "Create_Verdict_for_url": {
                   "runAfter": {},
@@ -585,13 +579,13 @@
                 },
                 "Parse_verdict_JSON": {
                   "runAfter": {
-                    "Transform_Verdict_XML_to_JSON": [
+                    "Contract_JSON_object_for_verdict": [
                       "Succeeded"
                     ]
                   },
                   "type": "ParseJson",
                   "inputs": {
-                    "content": "@body('Transform_Verdict_XML_to_JSON')",
+                    "content": "@variables('VerdictJSON')",
                     "schema": {
                       "properties": {
                         "get-verdict-info": {
@@ -619,24 +613,6 @@
                       "type": "object"
                     }
                   }
-                },
-                "Transform_Verdict_XML_to_JSON": {
-                  "runAfter": {
-                    "Create_Verdict_for_url": [
-                      "Succeeded"
-                    ]
-                  },
-                  "type": "Liquid",
-                  "kind": "XmlToJson",
-                  "inputs": {
-                    "content": "@{body('Create_Verdict_for_url')}",
-                    "integrationAccount": {
-                      "map": {
-                        "name": "UrlVerdict"
-                      }
-                    }
-                  },
-                  "description": "Convert Verdict XML to JSON using liquid mapping file"
                 }
               },
               "runAfter": {
@@ -696,7 +672,7 @@
                   {
                     "name": "apikey",
                     "type": "string",
-                    "value": "1b2664d571ee864b5cfb34e60e132920"
+                    "value": "[parameters('Wildfire_APIkey')]"
                   }
                 ]
               },
@@ -704,7 +680,7 @@
             },
             "Initialize_array_to_add_existing_member_of_the_security_policy_rules": {
               "runAfter": {
-                "Initialize_array_variable_to_append_comments": [
+                "Initialize_array_variable_for_verdict_URL_collections": [
                   "Succeeded"
                 ]
               },
@@ -720,7 +696,7 @@
             },
             "Initialize_array_variable_for_comment": {
               "runAfter": {
-                "Initialize_apikey_string_variable": [
+                "Initialize_object_variable_to_create_verdict_JSON": [
                   "Succeeded"
                 ]
               },
@@ -752,6 +728,23 @@
               },
               "description": "Array variable to defined adaptive card message"
             },
+            "Initialize_array_variable_for_verdict_URL_collections": {
+              "runAfter": {
+                "Initialize_array_variable_to_append_comments": [
+                  "Succeeded"
+                ]
+              },
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "VerdictURLs",
+                    "type": "array"
+                  }
+                ]
+              },
+              "description": "Invalid verdict array storage"
+            },
             "Initialize_array_variable_to_append_comments": {
               "runAfter": {
                 "Initialize_array_variable_for_informative_adaptive_card_message": [
@@ -769,6 +762,23 @@
               },
               "description": "Initialize array variable to append comments of each iteration "
             },
+            "Initialize_object_variable_to_create_verdict_JSON": {
+              "runAfter": {
+                "Initialize_apikey_string_variable": [
+                  "Succeeded"
+                ]
+              },
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "VerdictJSON",
+                    "type": "object"
+                  }
+                ]
+              },
+              "description": "store verdict JOSN object"
+            },
             "Initialize_string_variable_for_predefined_security_policy_rules": {
               "runAfter": {
                 "Initialize_array_variable_for_comment": [
@@ -781,7 +791,7 @@
                   {
                     "name": "securityPolicyRules",
                     "type": "string",
-                    "value": "Acc Security Policy"
+                    "value": "[parameters('Security_Poilcy_rule')]"
                   }
                 ]
               },
@@ -789,7 +799,7 @@
             },
             "Post_adaptive_card_in_a_chat_or_channel": {
               "runAfter": {
-                "For_each_each_URL": [
+                "Append_comments_to_an_consolidated_array": [
                   "Succeeded"
                 ]
               },
@@ -811,6 +821,122 @@
                 "method": "post",
                 "path": "/v1.0/teams/conversation/adaptivecard/poster/@{encodeURIComponent('User')}/location/@{encodeURIComponent('Channel')}"
               }
+            },
+            "Select_all_Invalid_URL_verdicts": {
+              "runAfter": {
+                "check_invalid_verdict_array": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Select",
+              "inputs": {
+                "from": "@variables('VerdictURLs')",
+                "select": {
+                  "text": "@item()",
+                  "type": "TextBlock"
+                }
+              }
+            },
+            "Set_adaptive_card_body_in_array_variable_for_In-valid_verdict": {
+              "runAfter": {
+                "Select_all_Invalid_URL_verdicts": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "InformativeAdaptiveCardBody",
+                "value": [
+                  {
+                    "size": "Large",
+                    "text": "URL- Azure Sentinel",
+                    "type": "TextBlock",
+                    "weight": "Bolder",
+                    "wrap": true
+                  },
+                  {
+                    "size": "Large",
+                    "text": "Below URL(s) are blocked",
+                    "type": "TextBlock",
+                    "weight": "Bolder",
+                    "wrap": true
+                  },
+                  {
+                    "columns": [
+                      {
+                        "items": "@body('Select_all_Invalid_URL_verdicts')",
+                        "type": "Column",
+                        "wrap": true
+                      }
+                    ],
+                    "type": "ColumnSet"
+                  },
+                  {
+                    "text": "are having invalid verdict value and its blocked",
+                    "type": "TextBlock",
+                    "wrap": true
+                  }
+                ]
+              },
+              "description": "Set adaptive card body in array variable for In-valid verdict"
+            },
+            "check_invalid_verdict_array": {
+              "actions": {
+                "Append_information_to_incident_comments": {
+                  "runAfter": {
+                    "construct_HTML_Table_for_invalid_verdict": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "incidentComment",
+                    "value": "<b>Below table provides the list of Malicious URL(s) that are associated with incident.</b>\n@{body('construct_HTML_Table_for_invalid_verdict')}"
+                  },
+                  "description": "Append  information to incident comments"
+                },
+                "construct_HTML_Table_for_invalid_verdict": {
+                  "runAfter": {},
+                  "type": "Table",
+                  "inputs": {
+                    "columns": [
+                      {
+                        "header": "Address_object",
+                        "value": "@item()"
+                      },
+                      {
+                        "header": "Secuirty_Policy",
+                        "value": "@variables('securityPolicyRules')"
+                      },
+                      {
+                        "header": "Comments",
+                        "value": "Blocked"
+                      }
+                    ],
+                    "format": "HTML",
+                    "from": "@variables('VerdictURLs')"
+                  },
+                  "description": "construct HTML Table for invalid verdict"
+                }
+              },
+              "runAfter": {
+                "For_each_each_URL": [
+                  "Succeeded"
+                ]
+              },
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@variables('VerdictURLs')",
+                        "@null"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "type": "If"
             }
           },
           "outputs": {}
@@ -821,7 +947,7 @@
               "PaloAltoConnector": {
                 "connectionId": "[resourceId('Microsoft.Web/connections', variables('PaloAltoConnectionName'))]",
                 "connectionName": "[variables('PaloAltoConnectionName')]",
-                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Web/customApis/PaloAltoConnector')]"
+                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Web/customApis/',parameters('PaloAlto_PAN-OS_CustomConnector_Name'))]"
               },
               "PaloaltoWFConnector": {
                 "connectionId": "[resourceId('Microsoft.Web/connections', variables('PaloaltoWFConnectionName'))]",
